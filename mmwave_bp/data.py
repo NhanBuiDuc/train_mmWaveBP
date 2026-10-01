@@ -6,9 +6,9 @@ Each method cuts its own windows from a recording (`mmwave_bp/methods/*.examples
 
 Loaders
     erlangen     chest, 24 GHz CW radar, continuous BP             run on the real files
-    blumio       wrist, 60 GHz wearable radar, continuous BP       written from the published
-    airbp        wrist, 15 public clips, cuff values               file description, NOT run on
-                                                                   the files (login / not fetched)
+    blumio       wrist, 60 GHz wearable radar, continuous BP       written from the published file
+                                                                   description, NOT run on the files (login)
+    airbp        wrist, 15 public clips, cuff values               run on the real files
     npz          your own data, format in `npz` below
 
 Download links: README.md and download_data.py.
@@ -176,9 +176,9 @@ def blumio(root: Path, column: int = 5, log=print) -> list[Recording]:
 # ------------------------------------------------------------------ airBP public sample (wrist)
 def airbp(root: Path, fs: float = 210.0, log=print) -> list[Recording]:
     """github.com/YumengLiang/dataset-of-mmwave, dataset_blood_pressure.zip (MIT): 15 clips of
-    6300 samples at 210 Hz, labels as lines `data_path | SBP | DBP | HeartRate | Gender` in the
-    ground-truth text file. The clips carry no subject id, so every clip is its own "subject"
-    (5 real subjects: subject-wise scores are optimistic). NOT run on the real files."""
+    6300 samples at 210 Hz (variable `fftmax`, the amplitude of the artery cell) from 5 subjects,
+    3 clips each (`test<subject>-<clip>.mat`); labels as lines `path SBP DBP HeartRate Gender` in
+    groudtruth.txt. Checked on the real files."""
     root = Path(root)
     labels = {}
     for txt in root.rglob("*.txt"):
@@ -197,9 +197,11 @@ def airbp(root: Path, fs: float = 210.0, log=print) -> list[Recording]:
         x = np.abs(x) if np.iscomplexobj(x) else x.astype(float)
         if x.ndim > 1:                                               # several channels: the longest axis is time
             x = np.moveaxis(x, int(np.argmax(x.shape)), -1).reshape(-1, max(x.shape)).mean(axis=0)
-        pulse = dsp.resample(x - x.mean(), fs, FS)
+        pulse = dsp.resample(-(x - x.mean()), fs, FS)               # the pulse is -RSS (airBP Eq. 10)
         sbp, dbp = labels[path.stem]
-        out.append(Recording(path.stem, "clip", "wrist", pulse.astype(np.float32), sbp=sbp, dbp=dbp))
+        subject, _, clip = path.stem.partition("-")                  # test33-2 = subject test33, clip 2
+        out.append(Recording(subject, path.stem, "wrist", pulse.astype(np.float32), sbp=sbp, dbp=dbp,
+                             order=int(clip) if clip.isdigit() else 0))
     return out
 
 

@@ -72,14 +72,16 @@ python train.py --method hbpfi --dataset npz --data data/my_arm_sites --out runs
 | | `erlangen` (chest, continuous BP) | `blumio` (wrist, continuous BP) | `airbp` (wrist, 15 clips, cuff) | `npz` (your data) |
 |---|---|---|---|---|
 | wavebp | yes | yes | no (needs a BP waveform) | with `abp` |
-| rfbp | yes | yes | yes | yes |
+| rfbp | yes | yes | no (its breathing-stationarity gate rejects the 30 s wrist clips) | yes |
 | airbp | yes | yes | yes | yes |
 | mmbp | yes | yes | yes | yes |
 | hbpfi | no | no | no | with `pulse` of shape [sites, n], sites >= 2 |
 
-Tested here: `erlangen` with every single-site method (windows; WaveBP and RF-BP also trained
-for a few epochs). **Not tested: the `blumio` and `airbp` loaders** (written from the published
-file descriptions; check the columns on the first file). hBP-Fi has no public data at all.
+Tested here on the real files: `erlangen` with every single-site method (WaveBP and RF-BP
+trained for a few epochs) and `airbp` (airBP trained leave-one-subject-out on the 15 clips: no
+better than the baselines, as expected from 5 subjects). **Not tested: the `blumio` loader**
+(written from the published file description; check the columns on the first file). hBP-Fi has
+no public data at all.
 
 Your own recordings: one `.npz` per recording with `pulse`, `fs`, `subject` and either
 `abp` + `fs_abp` or `sbp` + `dbp` (details in `mmwave_bp/data.py`, function `npz`).
